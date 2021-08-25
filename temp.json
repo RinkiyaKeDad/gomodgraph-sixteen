@@ -1,0 +1,59 @@
+{
+    "Dir": "/Users/arsh/go/pkg/mod/go.uber.org/zap@v1.16.0/internal/exit",
+    "ImportPath": "go.uber.org/zap/internal/exit",
+    "Name": "exit",
+    "Doc": "Package exit provides stubs so that unit tests can exercise code that calls os.Exit(1).",
+    "Root": "/Users/arsh/go/pkg/mod/go.uber.org/zap@v1.16.0",
+    "Module": {
+        "Path": "go.uber.org/zap",
+        "Version": "v1.16.0",
+        "Time": "2020-09-01T21:18:33Z",
+        "Dir": "/Users/arsh/go/pkg/mod/go.uber.org/zap@v1.16.0",
+        "GoMod": "/Users/arsh/go/pkg/mod/cache/download/go.uber.org/zap/@v/v1.16.0.mod",
+        "GoVersion": "1.13"
+    },
+    "DepOnly": true,
+    "Stale": true,
+    "StaleReason": "build ID mismatch",
+    "GoFiles": [
+        "exit.go"
+    ],
+    "Imports": [
+        "os"
+    ],
+    "Deps": [
+        "errors",
+        "internal/bytealg",
+        "internal/cpu",
+        "internal/oserror",
+        "internal/poll",
+        "internal/race",
+        "internal/reflectlite",
+        "internal/syscall/execenv",
+        "internal/syscall/unix",
+        "internal/testlog",
+        "internal/unsafeheader",
+        "io",
+        "io/fs",
+        "os",
+        "path",
+        "runtime",
+        "runtime/internal/atomic",
+        "runtime/internal/math",
+        "runtime/internal/sys",
+        "sort",
+        "sync",
+        "sync/atomic",
+        "syscall",
+        "time",
+        "unicode/utf8",
+        "unsafe"
+    ],
+    "TestGoFiles": [
+        "exit_test.go"
+    ],
+    "TestImports": [
+        "github.com/stretchr/testify/assert",
+        "testing"
+    ]
+}

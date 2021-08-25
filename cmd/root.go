@@ -16,8 +16,15 @@ limitations under the License.
 package cmd
 
 import (
+	"bufio"
+	"encoding/json"
 	"fmt"
+	"log"
 	"os"
+	"os/exec"
+	"strings"
+	"time"
+
 	"github.com/spf13/cobra"
 
 	homedir "github.com/mitchellh/go-homedir"
@@ -25,6 +32,33 @@ import (
 )
 
 var cfgFile string
+
+type ModuleStruct struct {
+	Path      string    `json:"Path"`
+	Version   string    `json:"Version"`
+	Time      time.Time `json:"Time"`
+	Dir       string    `json:"Dir"`
+	GoMod     string    `json:"GoMod"`
+	GoVersion string    `json:"GoVersion"`
+}
+
+type GoListSingleOutputStruct struct {
+	Dir          string       `json:"Dir"`
+	ImportPath   string       `json:"ImportPath"`
+	Name         string       `json:"Name"`
+	Doc          string       `json:"Doc"`
+	Target       string       `json:"Target"`
+	Root         string       `json:"Root"`
+	Module       ModuleStruct `json:"Module"`
+	Goroot       bool         `json:"Goroot"`
+	Standard     bool         `json:"Standard"`
+	DepOnly      bool         `json:"DepOnly"`
+	GoFiles      []string     `json:"GoFiles"`
+	Imports      []string     `json:"Imports"`
+	Deps         []string     `json:"Deps"`
+	XTestGoFiles []string     `json:"XTestGoFiles"`
+	XTestImports []string     `json:"XTestImports"`
+}
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -38,7 +72,57 @@ This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
-	// Run: func(cmd *cobra.Command, args []string) { },
+	Run: func(cmd *cobra.Command, args []string) {
+
+		pathToModule := make(map[string]ModuleStruct)
+		isStandardPath := make(map[string]bool)
+		var pkgs []string
+
+		fmt.Println("Hello")
+		goList := exec.Command("go", "list", "-json", "-deps")
+		goListOutput, err := goList.Output()
+		if err != nil {
+			log.Fatal(err)
+		}
+		goListOutputString := string(goListOutput)
+		//fmt.Println(goListOutputString)
+		scanner := bufio.NewScanner(strings.NewReader(goListOutputString))
+		start := false
+		jsonString := ""
+		for scanner.Scan() {
+			line := scanner.Text()
+			words := strings.Fields(line)
+			if words[0] == "{" {
+				start = true
+				jsonString = "{"
+			} else if words[0] == "}" {
+				start = false
+				jsonString += "}"
+				// process jsonString
+				// fmt.Println("$$$$")
+				// fmt.Println(jsonString)
+				// fmt.Println("$$$$")
+				var goListSingleOutput GoListSingleOutputStruct
+				json.Unmarshal([]byte(jsonString), &goListSingleOutput)
+				// fmt.Println("dir", goListSingleOutput.Dir)
+				pkgs = append(pkgs, goListSingleOutput.ImportPath)
+				pathToModule[goListSingleOutput.ImportPath] = goListSingleOutput.Module
+				isStandardPath[goListSingleOutput.ImportPath] = goListSingleOutput.Standard
+			} else {
+				if start {
+					jsonString += line
+				}
+			}
+		}
+
+		for _, pkg := range pkgs {
+			fmt.Println()
+			fmt.Println("pkg", pkg)
+			fmt.Println("pathToModule", pathToModule[pkg])
+			fmt.Println("isStandardPath", isStandardPath[pkg])
+			fmt.Println()
+		}
+	},
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
