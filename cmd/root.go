@@ -76,7 +76,8 @@ to quickly create a Cobra application.`,
 
 		pathToModule := make(map[string]ModuleStruct)
 		isStandardPath := make(map[string]bool)
-		var pkgs []string
+		pkgs := make(map[string][]string)
+		//var pkgs []string
 
 		fmt.Println("Hello")
 		goList := exec.Command("go", "list", "-json", "-deps")
@@ -105,7 +106,8 @@ to quickly create a Cobra application.`,
 				var goListSingleOutput GoListSingleOutputStruct
 				json.Unmarshal([]byte(jsonString), &goListSingleOutput)
 				// fmt.Println("dir", goListSingleOutput.Dir)
-				pkgs = append(pkgs, goListSingleOutput.ImportPath)
+				pkgs[goListSingleOutput.ImportPath] = goListSingleOutput.Deps
+				//pkgs = append(pkgs, goListSingleOutput.ImportPath)
 				pathToModule[goListSingleOutput.ImportPath] = goListSingleOutput.Module
 				isStandardPath[goListSingleOutput.ImportPath] = goListSingleOutput.Standard
 			} else {
@@ -115,13 +117,28 @@ to quickly create a Cobra application.`,
 			}
 		}
 
-		for _, pkg := range pkgs {
-			fmt.Println()
-			fmt.Println("pkg", pkg)
-			fmt.Println("pathToModule", pathToModule[pkg])
-			fmt.Println("isStandardPath", isStandardPath[pkg])
-			fmt.Println()
+		var goModGraphOutput [][]string
+		for pkg, deps := range pkgs {
+			// fmt.Println()
+			// fmt.Println("pkg", pkg)
+			// fmt.Println("pathToModule", pathToModule[pkg])
+			// fmt.Println("isStandardPath", isStandardPath[pkg])
+			// fmt.Println()
+			if !isStandardPath[pkg] {
+				for _, dep := range deps {
+					var goModGraphOutputLine []string
+					goModGraphOutputLine = append(goModGraphOutputLine, pathToModule[pkg].Path)
+					goModGraphOutputLine = append(goModGraphOutputLine, pathToModule[dep].Path)
+					goModGraphOutput = append(goModGraphOutput, goModGraphOutputLine)
+				}
+			}
 		}
+
+		finalOutput := ""
+		for _, line := range goModGraphOutput {
+			finalOutput += (strings.Join(line, " ") + "\n")
+		}
+		fmt.Println(finalOutput)
 	},
 }
 
