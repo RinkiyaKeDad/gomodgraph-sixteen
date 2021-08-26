@@ -74,19 +74,17 @@ to quickly create a Cobra application.`,
 	// has an action associated with it:
 	Run: func(cmd *cobra.Command, args []string) {
 
-		pathToModule := make(map[string]ModuleStruct)
+		pathToModule := make(map[string]string)
 		isStandardPath := make(map[string]bool)
 		pkgs := make(map[string][]string)
-		//var pkgs []string
 
-		fmt.Println("Hello")
 		goList := exec.Command("go", "list", "-json", "-deps")
 		goListOutput, err := goList.Output()
 		if err != nil {
 			log.Fatal(err)
 		}
 		goListOutputString := string(goListOutput)
-		//fmt.Println(goListOutputString)
+
 		scanner := bufio.NewScanner(strings.NewReader(goListOutputString))
 		start := false
 		jsonString := ""
@@ -99,16 +97,12 @@ to quickly create a Cobra application.`,
 			} else if words[0] == "}" {
 				start = false
 				jsonString += "}"
-				// process jsonString
-				// fmt.Println("$$$$")
-				// fmt.Println(jsonString)
-				// fmt.Println("$$$$")
+
 				var goListSingleOutput GoListSingleOutputStruct
 				json.Unmarshal([]byte(jsonString), &goListSingleOutput)
-				// fmt.Println("dir", goListSingleOutput.Dir)
+
 				pkgs[goListSingleOutput.ImportPath] = goListSingleOutput.Deps
-				//pkgs = append(pkgs, goListSingleOutput.ImportPath)
-				pathToModule[goListSingleOutput.ImportPath] = goListSingleOutput.Module
+				pathToModule[goListSingleOutput.ImportPath] = goListSingleOutput.Module.Path
 				isStandardPath[goListSingleOutput.ImportPath] = goListSingleOutput.Standard
 			} else {
 				if start {
@@ -119,27 +113,53 @@ to quickly create a Cobra application.`,
 
 		var goModGraphOutput [][]string
 		for pkg, deps := range pkgs {
-			// fmt.Println()
-			// fmt.Println("pkg", pkg)
-			// fmt.Println("pathToModule", pathToModule[pkg])
-			// fmt.Println("isStandardPath", isStandardPath[pkg])
-			// fmt.Println()
 			if !isStandardPath[pkg] {
 				for _, dep := range deps {
-					var goModGraphOutputLine []string
-					goModGraphOutputLine = append(goModGraphOutputLine, pathToModule[pkg].Path)
-					goModGraphOutputLine = append(goModGraphOutputLine, pathToModule[dep].Path)
-					goModGraphOutput = append(goModGraphOutput, goModGraphOutputLine)
+
+					// fmt.Println("pkg", pkg)
+					// fmt.Println("deps", deps)
+					// fmt.Println("pathToModule", pathToModule[pkg])
+					// fmt.Println("isStandardPath", isStandardPath[pkg])
+					if !isStandardPath[dep] {
+						var goModGraphOutputLine []string
+						goModGraphOutputLine = append(goModGraphOutputLine, pathToModule[pkg])
+						goModGraphOutputLine = append(goModGraphOutputLine, pathToModule[dep])
+						if !contains(goModGraphOutput, goModGraphOutputLine) && goModGraphOutputLine[0] != goModGraphOutputLine[1] {
+							goModGraphOutput = append(goModGraphOutput, goModGraphOutputLine)
+						}
+					}
+
 				}
 			}
 		}
 
 		finalOutput := ""
 		for _, line := range goModGraphOutput {
-			finalOutput += (strings.Join(line, " ") + "\n")
+			finalOutput += (strings.Join(line, " -> ") + "\n")
 		}
 		fmt.Println(finalOutput)
 	},
+}
+
+func contains(a [][]string, b []string) bool {
+	for _, v := range a {
+		if equal(v, b) {
+			return true
+		}
+	}
+	return false
+}
+
+func equal(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i, v := range a {
+		if v != b[i] {
+			return false
+		}
+	}
+	return true
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
