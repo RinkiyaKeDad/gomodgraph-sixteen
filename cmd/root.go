@@ -35,8 +35,10 @@ var cfgFile string
 
 type ModuleStruct struct {
 	Path      string    `json:"Path"`
+	Main      bool      `json:"Main"`
 	Version   string    `json:"Version"`
 	Time      time.Time `json:"Time"`
+	Indirect  bool      `json:"Indirect"`
 	Dir       string    `json:"Dir"`
 	GoMod     string    `json:"GoMod"`
 	GoVersion string    `json:"GoVersion"`
@@ -56,6 +58,7 @@ type GoListSingleOutputStruct struct {
 	GoFiles      []string     `json:"GoFiles"`
 	Imports      []string     `json:"Imports"`
 	Deps         []string     `json:"Deps"`
+	TestImports  []string     `json:"TestImports"`
 	XTestGoFiles []string     `json:"XTestGoFiles"`
 	XTestImports []string     `json:"XTestImports"`
 }
@@ -74,11 +77,11 @@ to quickly create a Cobra application.`,
 	// has an action associated with it:
 	Run: func(cmd *cobra.Command, args []string) {
 
-		pathToModule := make(map[string]string)
+		pathToModule := make(map[string]ModuleStruct)
 		isStandardPath := make(map[string]bool)
 		pkgs := make(map[string][]string)
 
-		goList := exec.Command("go", "list", "-json", "-deps")
+		goList := exec.Command("go", "list", "-json", "-test", "-deps", "all")
 		goListOutput, err := goList.Output()
 		if err != nil {
 			log.Fatal(err)
@@ -102,7 +105,8 @@ to quickly create a Cobra application.`,
 				json.Unmarshal([]byte(jsonString), &goListSingleOutput)
 
 				pkgs[goListSingleOutput.ImportPath] = goListSingleOutput.Deps
-				pathToModule[goListSingleOutput.ImportPath] = goListSingleOutput.Module.Path
+				pkgs[goListSingleOutput.ImportPath] = append(pkgs[goListSingleOutput.ImportPath], goListSingleOutput.TestImports...)
+				pathToModule[goListSingleOutput.ImportPath] = goListSingleOutput.Module
 				isStandardPath[goListSingleOutput.ImportPath] = goListSingleOutput.Standard
 			} else {
 				if start {
@@ -116,14 +120,20 @@ to quickly create a Cobra application.`,
 			if !isStandardPath[pkg] {
 				for _, dep := range deps {
 
+					// fmt.Println("$$$")
 					// fmt.Println("pkg", pkg)
 					// fmt.Println("deps", deps)
 					// fmt.Println("pathToModule", pathToModule[pkg])
 					// fmt.Println("isStandardPath", isStandardPath[pkg])
+					// fmt.Println("$$$")
+
 					if !isStandardPath[dep] {
+						if pathToModule[pkg].Main && pathToModule[dep].Indirect {
+							continue
+						}
 						var goModGraphOutputLine []string
-						goModGraphOutputLine = append(goModGraphOutputLine, pathToModule[pkg])
-						goModGraphOutputLine = append(goModGraphOutputLine, pathToModule[dep])
+						goModGraphOutputLine = append(goModGraphOutputLine, pathToModule[pkg].Path)
+						goModGraphOutputLine = append(goModGraphOutputLine, pathToModule[dep].Path)
 						if !contains(goModGraphOutput, goModGraphOutputLine) && goModGraphOutputLine[0] != goModGraphOutputLine[1] {
 							goModGraphOutput = append(goModGraphOutput, goModGraphOutputLine)
 						}
